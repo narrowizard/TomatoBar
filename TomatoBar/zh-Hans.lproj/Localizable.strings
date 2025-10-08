@@ -9,6 +9,8 @@
 "SettingsView.stopAfterBreak.label" = "在休息后停止";
 "SettingsView.showTimerInMenuBar.label" = "在菜单栏中显示计时器";
 "SettingsView.launchAtLogin.label" = "登录时启动";
+"SettingsView.apiEndpoint.label" = "API端点";
+"SettingsView.apiEndpoint.help" = "配置后可自动上传工作记录到服务器";
 "SoundsView.isWindupEnabled.label" = "发条声";
 "SoundsView.isDingEnabled.label" = "叮";
 "SoundsView.isTickingEnabled.label" = "滴答声";
@@ -25,3 +27,13 @@
 "TBTimer.onRestStart.skip.title" = "跳过";
 "TBTimer.onRestFinish.title" = "休息结束";
 "TBTimer.onRestFinish.body" = "继续努力!";
+"WorkCompletionView.title" = "番茄钟完成！";
+"WorkCompletionView.description.label" = "工作内容";
+"WorkCompletionView.description.placeholder" = "描述你在这个番茄钟中完成的工作...";
+"WorkCompletionView.tags.label" = "标签";
+"WorkCompletionView.tags.placeholder" = "添加标签，用逗号分隔...";
+"WorkCompletionView.cancel" = "取消";
+"WorkCompletionView.skip" = "跳过";
+"WorkCompletionView.submit" = "提交";
+"WorkCompletionView.success.title" = "成功";
+"WorkCompletionView.success.message" = "工作记录已保存";

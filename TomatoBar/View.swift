@@ -57,6 +57,7 @@ private struct IntervalsView: View {
 private struct SettingsView: View {
     @EnvironmentObject var timer: TBTimer
     @ObservedObject private var launchAtLogin = LaunchAtLogin.observable
+    @State private var apiEndpoint = UserDefaults.standard.string(forKey: "WorkCompletionAPIEndpoint") ?? ""
 
     var body: some View {
         VStack {
@@ -83,6 +84,22 @@ private struct SettingsView: View {
                                        comment: "Launch at login label"))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }.toggleStyle(.switch)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(NSLocalizedString("SettingsView.apiEndpoint.label", comment: "API endpoint label"))
+                    .font(.headline)
+                HStack {
+                    TextField("https://your-api.com/work-completions", text: $apiEndpoint)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    Button("保存") {
+                        UserDefaults.standard.set(apiEndpoint, forKey: "WorkCompletionAPIEndpoint")
+                    }
+                }
+                Text(NSLocalizedString("SettingsView.apiEndpoint.help", comment: "API endpoint help"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Spacer().frame(minHeight: 0)
         }
         .padding(4)

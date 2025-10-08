@@ -9,6 +9,8 @@
 "SettingsView.stopAfterBreak.label" = "Stop after break";
 "SettingsView.showTimerInMenuBar.label" = "Show timer in menu bar";
 "SettingsView.launchAtLogin.label" = "Launch at login";
+"SettingsView.apiEndpoint.label" = "API Endpoint";
+"SettingsView.apiEndpoint.help" = "Configure to automatically upload work records to server";
 "SoundsView.isWindupEnabled.label" = "Windup";
 "SoundsView.isDingEnabled.label" = "Ding";
 "SoundsView.isTickingEnabled.label" = "Ticking";
@@ -25,3 +27,13 @@
 "TBTimer.onRestStart.skip.title" = "Skip";
 "TBTimer.onRestFinish.title" = "Break is over";
 "TBTimer.onRestFinish.body" = "Keep up the good work!";
+"WorkCompletionView.title" = "Pomodoro Completed!";
+"WorkCompletionView.description.label" = "Work Description";
+"WorkCompletionView.description.placeholder" = "Describe what you accomplished in this pomodoro...";
+"WorkCompletionView.tags.label" = "Tags";
+"WorkCompletionView.tags.placeholder" = "Add tags, separated by commas...";
+"WorkCompletionView.cancel" = "Cancel";
+"WorkCompletionView.skip" = "Skip";
+"WorkCompletionView.submit" = "Submit";
+"WorkCompletionView.success.title" = "Success";
+"WorkCompletionView.success.message" = "Work record saved";
