@@ -62,32 +62,35 @@ private struct SettingsView: View {
     @State private var appSecret = UserDefaults.standard.string(forKey: "WorkCompletionAppSecret") ?? ""
 
     var body: some View {
-        VStack {
-            KeyboardShortcuts.Recorder(for: .startStopTimer) {
-                Text(NSLocalizedString("SettingsView.shortcut.label",
-                                       comment: "Shortcut label"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            Toggle(isOn: $timer.stopAfterBreak) {
-                Text(NSLocalizedString("SettingsView.stopAfterBreak.label",
-                                       comment: "Stop after break label"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }.toggleStyle(.switch)
-            Toggle(isOn: $timer.showTimerInMenuBar) {
-                Text(NSLocalizedString("SettingsView.showTimerInMenuBar.label",
-                                       comment: "Show timer in menu bar label"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }.toggleStyle(.switch)
-                .onChange(of: timer.showTimerInMenuBar) { _ in
-                    timer.updateTimeLeft()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                KeyboardShortcuts.Recorder(for: .startStopTimer) {
+                    Text(NSLocalizedString("SettingsView.shortcut.label",
+                                           comment: "Shortcut label"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            Toggle(isOn: $launchAtLogin.isEnabled) {
-                Text(NSLocalizedString("SettingsView.launchAtLogin.label",
-                                       comment: "Launch at login label"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }.toggleStyle(.switch)
+                Toggle(isOn: $timer.stopAfterBreak) {
+                    Text(NSLocalizedString("SettingsView.stopAfterBreak.label",
+                                           comment: "Stop after break label"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }.toggleStyle(.switch)
+                Toggle(isOn: $timer.showTimerInMenuBar) {
+                    Text(NSLocalizedString("SettingsView.showTimerInMenuBar.label",
+                                           comment: "Show timer in menu bar label"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }.toggleStyle(.switch)
+                    .onChange(of: timer.showTimerInMenuBar) { _ in
+                        timer.updateTimeLeft()
+                    }
+                    Toggle(isOn: $launchAtLogin.isEnabled) {
+                        Text(NSLocalizedString("SettingsView.launchAtLogin.label",
+                                               comment: "Launch at login label"))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }.toggleStyle(.switch)
 
-            VStack(alignment: .leading, spacing: 4) {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
                 Text(NSLocalizedString("SettingsView.apiEndpoint.label", comment: "API endpoint label"))
                     .font(.headline)
                 HStack {
@@ -102,39 +105,38 @@ private struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(NSLocalizedString("SettingsView.appId.label", comment: "App ID label"))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("SettingsView.appId.label", comment: "App ID label"))
                     .font(.headline)
-                HStack {
-                    TextField("your-app-id", text: $appId)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    Button("保存") {
-                        UserDefaults.standard.set(appId, forKey: "WorkCompletionAppId")
+                    HStack {
+                        TextField("your-app-id", text: $appId)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                        Button("保存") {
+                            UserDefaults.standard.set(appId, forKey: "WorkCompletionAppId")
+                        }
                     }
+                    Text(NSLocalizedString("SettingsView.appId.help", comment: "App ID help"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                Text(NSLocalizedString("SettingsView.appId.help", comment: "App ID help"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(NSLocalizedString("SettingsView.appSecret.label", comment: "App Secret label"))
-                    .font(.headline)
-                HStack {
-                    SecureField("your-app-secret", text: $appSecret)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    Button("保存") {
-                        UserDefaults.standard.set(appSecret, forKey: "WorkCompletionAppSecret")
-                    }
+            VStack(alignment: .leading, spacing: 8) {
+                    Text(NSLocalizedString("SettingsView.appSecret.label", comment: "App Secret label"))
+                        .font(.headline)
+                        HStack {
+                            SecureField("your-app-secret", text: $appSecret)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                            Button("保存") {
+                                UserDefaults.standard.set(appSecret, forKey: "WorkCompletionAppSecret")
+                            }
+                        }
+                    Text(NSLocalizedString("SettingsView.appSecret.help", comment: "App Secret help"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
-                Text(NSLocalizedString("SettingsView.appSecret.help", comment: "App Secret help"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
-
-            Spacer().frame(minHeight: 0)
+            .padding(4)
         }
-        .padding(4)
     }
 }
 
@@ -278,8 +280,8 @@ struct TBPopoverView: View {
 }
 
 #if DEBUG
-    func debugSize(proxy: GeometryProxy) -> some View {
-        print("Optimal popover size:", proxy.size)
-        return Color.clear
-    }
+func debugSize(proxy: GeometryProxy) -> some View {
+    print("Optimal popover size:", proxy.size)
+    return Color.clear
+}
 #endif
