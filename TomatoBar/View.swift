@@ -58,6 +58,8 @@ private struct SettingsView: View {
     @EnvironmentObject var timer: TBTimer
     @ObservedObject private var launchAtLogin = LaunchAtLogin.observable
     @State private var apiEndpoint = UserDefaults.standard.string(forKey: "WorkCompletionAPIEndpoint") ?? ""
+    @State private var appId = UserDefaults.standard.string(forKey: "WorkCompletionAppId") ?? ""
+    @State private var appSecret = UserDefaults.standard.string(forKey: "WorkCompletionAppSecret") ?? ""
 
     var body: some View {
         VStack {
@@ -96,6 +98,36 @@ private struct SettingsView: View {
                     }
                 }
                 Text(NSLocalizedString("SettingsView.apiEndpoint.help", comment: "API endpoint help"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(NSLocalizedString("SettingsView.appId.label", comment: "App ID label"))
+                    .font(.headline)
+                HStack {
+                    TextField("your-app-id", text: $appId)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    Button("保存") {
+                        UserDefaults.standard.set(appId, forKey: "WorkCompletionAppId")
+                    }
+                }
+                Text(NSLocalizedString("SettingsView.appId.help", comment: "App ID help"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(NSLocalizedString("SettingsView.appSecret.label", comment: "App Secret label"))
+                    .font(.headline)
+                HStack {
+                    SecureField("your-app-secret", text: $appSecret)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    Button("保存") {
+                        UserDefaults.standard.set(appSecret, forKey: "WorkCompletionAppSecret")
+                    }
+                }
+                Text(NSLocalizedString("SettingsView.appSecret.help", comment: "App Secret help"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

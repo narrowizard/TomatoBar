@@ -11,6 +11,10 @@
 "SettingsView.launchAtLogin.label" = "Launch at login";
 "SettingsView.apiEndpoint.label" = "API Endpoint";
 "SettingsView.apiEndpoint.help" = "Configure to automatically upload work records to server";
+"SettingsView.appId.label" = "App ID";
+"SettingsView.appId.help" = "Application ID for API authentication";
+"SettingsView.appSecret.label" = "App Secret";
+"SettingsView.appSecret.help" = "Application secret for signature generation (keep confidential)";
 "SoundsView.isWindupEnabled.label" = "Windup";
 "SoundsView.isDingEnabled.label" = "Ding";
 "SoundsView.isTickingEnabled.label" = "Ticking";

@@ -11,6 +11,10 @@
 "SettingsView.launchAtLogin.label" = "登录时启动";
 "SettingsView.apiEndpoint.label" = "API端点";
 "SettingsView.apiEndpoint.help" = "配置后可自动上传工作记录到服务器";
+"SettingsView.appId.label" = "应用ID";
+"SettingsView.appId.help" = "用于API认证的应用标识符";
+"SettingsView.appSecret.label" = "应用密钥";
+"SettingsView.appSecret.help" = "用于生成签名的应用密钥（请保密）";
 "SoundsView.isWindupEnabled.label" = "发条声";
 "SoundsView.isDingEnabled.label" = "叮";
 "SoundsView.isTickingEnabled.label" = "滴答声";

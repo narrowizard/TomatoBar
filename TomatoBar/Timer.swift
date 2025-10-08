@@ -6,7 +6,15 @@ import SwiftUI
 struct WorkCompletionData {
     let description: String
     let tags: [String]
-    let timestamp = Date()
+    let startTime: Date
+    let endTime: Date
+
+    init(description: String, tags: [String], startTime: Date, endTime: Date = Date()) {
+        self.description = description
+        self.tags = tags
+        self.startTime = startTime
+        self.endTime = endTime
+    }
 }
 
 // 工作完成视图
@@ -19,7 +27,15 @@ struct WorkCompletionView: View {
     @SwiftUI.State private var alertMessage = ""
     @SwiftUI.State private var alertTitle = ""
 
+    let startTime: Date
+    let endTime: Date
     let onCompletion: (WorkCompletionData) -> Void
+
+    init(startTime: Date, endTime: Date, onCompletion: @escaping (WorkCompletionData) -> Void) {
+        self.startTime = startTime
+        self.endTime = endTime
+        self.onCompletion = onCompletion
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -51,7 +67,7 @@ struct WorkCompletionView: View {
                 Spacer()
 
                 Button(NSLocalizedString("WorkCompletionView.skip", comment: "Skip button")) {
-                    onCompletion(WorkCompletionData(description: "", tags: []))
+                    onCompletion(WorkCompletionData(description: "", tags: [], startTime: startTime, endTime: endTime))
                     presentationMode.wrappedValue.dismiss()
                 }
 
@@ -73,7 +89,7 @@ struct WorkCompletionView: View {
         isSubmitting = true
 
         let tagArray = tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        let completionData = WorkCompletionData(description: workDescription, tags: tagArray)
+        let completionData = WorkCompletionData(description: workDescription, tags: tagArray, startTime: startTime, endTime: endTime)
 
         // 模拟网络请求
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -108,6 +124,7 @@ class TBTimer: ObservableObject {
     private var consecutiveWorkIntervals: Int = 0
     private var notificationCenter = TBNotificationCenter()
     private var finishTime: Date!
+    private var workStartTime: Date!
     private var timerFormatter = DateComponentsFormatter()
     @Published var timeLeftString: String = ""
     @Published var timer: DispatchSourceTimer?
@@ -270,6 +287,7 @@ class TBTimer: ObservableObject {
         TBStatusItem.shared.setIcon(name: .work)
         player.playWindup()
         player.startTicking()
+        workStartTime = Date()
         startTimer(seconds: workIntervalLength * 60)
     }
 
@@ -277,9 +295,9 @@ class TBTimer: ObservableObject {
         consecutiveWorkIntervals += 1
         player.playDing()
 
-        // 显示工作完成弹窗
+        // 显示工作完成弹窗，传递实际的工作开始和结束时间
         DispatchQueue.main.async {
-            self.showWorkCompletionWindow()
+            self.showWorkCompletionWindow(startTime: self.workStartTime, endTime: Date())
         }
     }
 
@@ -323,8 +341,8 @@ class TBTimer: ObservableObject {
         consecutiveWorkIntervals = 0
     }
 
-    private func showWorkCompletionWindow() {
-        let workCompletionWindow = WorkCompletionWindow { [weak self] completionData in
+    private func showWorkCompletionWindow(startTime: Date, endTime: Date) {
+        let workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime) { [weak self] completionData in
             self?.handleWorkCompletion(completionData)
         }
         workCompletionWindow.show()
@@ -333,6 +351,7 @@ class TBTimer: ObservableObject {
     private func handleWorkCompletion(_ data: WorkCompletionData) {
         // 如果有描述内容，则保存到本地
         if !data.description.isEmpty {
+            // 直接保存到本地
             saveWorkCompletionLocally(data)
             print("工作记录已保存到本地")
         }
@@ -346,7 +365,8 @@ class TBTimer: ObservableObject {
         let completionDict: [String: Any] = [
             "description": data.description,
             "tags": data.tags,
-            "timestamp": formatter.string(from: data.timestamp)
+            "start_time": formatter.string(from: data.startTime),
+            "end_time": formatter.string(from: data.endTime)
         ]
 
         savedCompletions.append(completionDict)
@@ -362,8 +382,8 @@ class TBTimer: ObservableObject {
 
 // WorkCompletionWindow 类定义
 class WorkCompletionWindow: NSWindowController {
-    init(onCompletion: @escaping (WorkCompletionData) -> Void) {
-        let workCompletionView = WorkCompletionView(onCompletion: onCompletion)
+    init(startTime: Date, endTime: Date, onCompletion: @escaping (WorkCompletionData) -> Void) {
+        let workCompletionView = WorkCompletionView(startTime: startTime, endTime: endTime, onCompletion: onCompletion)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled, .closable],
