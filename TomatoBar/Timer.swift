@@ -21,7 +21,6 @@ struct WorkCompletionData {
 struct WorkCompletionView: View {
     @Environment(\.presentationMode) var presentationMode
     @SwiftUI.State private var workDescription = ""
-    @SwiftUI.State private var tags = ""
     @SwiftUI.State private var isSubmitting = false
     @SwiftUI.State private var showAlert = false
     @SwiftUI.State private var alertMessage = ""
@@ -86,13 +85,7 @@ struct WorkCompletionView: View {
                     .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray.opacity(0.3), lineWidth: 1))
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(NSLocalizedString("WorkCompletionView.tags.label", comment: "Tags label"))
-                    .font(.headline)
-                TextField(NSLocalizedString("WorkCompletionView.tags.placeholder", comment: "Tags placeholder"), text: $tags)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-            }
-
+  
             HStack {
                 Button(NSLocalizedString("WorkCompletionView.cancel", comment: "Cancel button")) {
                     presentationMode.wrappedValue.dismiss()
@@ -114,7 +107,7 @@ struct WorkCompletionView: View {
             }
         }
         .padding(20)
-        .frame(width: 400, height: 380)
+        .frame(width: 400, height: 320)
         .alert(isPresented: $showAlert) {
             Alert(title: Text(alertTitle), message: Text(alertMessage), dismissButton: .default(Text(NSLocalizedString("OK", comment: "OK button"))))
         }
@@ -130,8 +123,7 @@ struct WorkCompletionView: View {
     private func submitWork() {
         isSubmitting = true
 
-        let tagArray = tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        let completionData = WorkCompletionData(description: workDescription, tags: tagArray, startTime: startTime, endTime: endTime)
+        let completionData = WorkCompletionData(description: workDescription, tags: [], startTime: startTime, endTime: endTime)
 
         // 模拟网络请求
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -464,7 +456,7 @@ class WorkCompletionWindow: NSWindowController {
 
         let workCompletionView = WorkCompletionView(startTime: startTime, endTime: endTime, onCompletion: onCompletion)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 380),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 320),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
