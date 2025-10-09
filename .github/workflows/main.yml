@@ -1,57 +1,80 @@
-name: main
+name: build-and-release
 
 on:
   push:
-    branches:
-      - '*'
     tags:
       - 'v*'
+  workflow_dispatch:  # 支持手动触发
 
 jobs:
   build:
     runs-on: macos-12
 
     steps:
-      - name: Delete old prerelease
-        if: github.ref_type == 'branch'
-        uses: dev-drprasad/delete-tag-and-release@v0.2.1
-        with:
-          delete_release: true
-          tag_name: prerelease
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set version for tag
-        if: github.ref_type == 'tag'
-        run: echo "version=$(git describe --tags --match 'v*')" >> $GITHUB_ENV
-
-      - name: Set version for branch
-        if: github.ref_type == 'branch'
-        run: echo "version=$(git describe --tags)" >> $GITHUB_ENV
+      - name: Set version
+        run: |
+          # 获取 fork 仓库名称
+          REPO_NAME=$(echo ${{ github.repository }} | cut -d'/' -f1)
+          # 获取版本号（去掉 v 前缀）
+          VERSION=$(git describe --tags --match 'v*' | sed 's/^v//')
+          # 设置输出变量
+          echo "repo_name=$REPO_NAME" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "full_name=${REPO_NAME}-TomatoBar" >> $GITHUB_ENV
 
       - name: Build
         env:
           DEVELOPER_DIR: /Applications/Xcode_14.1.app/Contents/Developer
         run: |
-          xcodebuild archive -project TomatoBar.xcodeproj -scheme TomatoBar -configuration Release -archivePath TomatoBar.xcarchive MARKETING_VERSION=${{github.ref_name}}
-          xcodebuild archive -archivePath TomatoBar.xcarchive -exportArchive -exportOptionsPlist export_options.plist -exportPath .
-          zip -r "TomatoBar-${{env.version}}.zip" "TomatoBar.app"
+          # 构建应用
+          xcodebuild archive -project TomatoBar.xcodeproj \
+                             -scheme TomatoBar \
+                             -configuration Release \
+                             -archivePath TomatoBar.xcarchive \
+                             MARKETING_VERSION=${{ env.version }}
 
-      - name: Release
-        if: github.ref_type == 'tag'
+          # 导出应用
+          xcodebuild -archivePath TomatoBar.xcarchive \
+                     -exportArchive \
+                     -exportOptionsPlist export_options.plist \
+                     -exportPath .
+
+          # 重命名应用以区分 fork 版本
+          mv "TomatoBar.app" "${{ env.full_name }}.app"
+
+          # 打包
+          zip -r "${{ env.full_name }}-${{ env.version }}.zip" "${{ env.full_name }}.app"
+
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: TomatoBar-${{env.version}}.zip
+          name: "${{ env.full_name }} v${{ env.version }}"
+          body: |
+            ## ${{ env.full_name }} v${{ env.version }}
 
-      - name: Prerelease
-        if: github.ref_type == 'branch'
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: prerelease
-          prerelease: true
-          files: TomatoBar-${{env.version}}.zip
+            这是 ${{ env.repo_name }} 的 TomatoBar fork 版本。
+
+            ### 主要变化
+            - 基于 [原始 TomatoBar](https://github.com/ivoronin/TomatoBar) v${{ env.version }}
+            - 添加了自定义 API 端点支持
+            - 支持工作完成记录上传到 https://tomast.narro.cn
+
+            ### 安装说明
+            1. 下载 `${{ env.full_name }}-${{ env.version }}.zip`
+            2. 解压缩并将应用拖到 Applications 文件夹
+            3. 如果系统提示无法验证开发者，请在系统偏好设置中允许运行
+
+            ### 使用说明
+            在设置中配置你的 API 端点即可开始使用增强功能。
+
+            ---
+
+            🤖 Generated with GitHub Actions
+          files: "${{ env.full_name }}-${{ env.version }}.zip"
+          draft: false
+          prerelease: false
