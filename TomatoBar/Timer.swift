@@ -44,6 +44,41 @@ struct WorkCompletionView: View {
                 .fontWeight(.semibold)
 
             VStack(alignment: .leading, spacing: 8) {
+                Text(NSLocalizedString("WorkCompletionView.time.label", comment: "Time period label"))
+                    .font(.headline)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(NSLocalizedString("WorkCompletionView.startTime.label", comment: "Start time label"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(formatTime(startTime))
+                            .font(.system(.body, design: .monospaced))
+                    }
+
+                    Spacer()
+
+                    Text("→")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(NSLocalizedString("WorkCompletionView.endTime.label", comment: "End time label"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(formatTime(endTime))
+                            .font(.system(.body, design: .monospaced))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(8)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
                 Text(NSLocalizedString("WorkCompletionView.description.label", comment: "Work description label"))
                     .font(.headline)
                 TextEditor(text: $workDescription)
@@ -79,10 +114,17 @@ struct WorkCompletionView: View {
             }
         }
         .padding(20)
-        .frame(width: 400, height: 300)
+        .frame(width: 400, height: 380)
         .alert(isPresented: $showAlert) {
             Alert(title: Text(alertTitle), message: Text(alertMessage), dismissButton: .default(Text(NSLocalizedString("OK", comment: "OK button"))))
         }
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .medium
+        formatter.dateStyle = .none
+        return formatter.string(from: date)
     }
 
     private func submitWork() {
@@ -128,6 +170,8 @@ class TBTimer: ObservableObject {
     private var timerFormatter = DateComponentsFormatter()
     @Published var timeLeftString: String = ""
     @Published var timer: DispatchSourceTimer?
+    private var currentWorkCompletionWindow: WorkCompletionWindow?
+    private var pendingWorkCompletionData: WorkCompletionData?
 
     init() {
         /*
@@ -284,6 +328,12 @@ class TBTimer: ObservableObject {
     }
 
     private func onWorkStart(context _: TBStateMachine.Context) {
+        // 如果有待处理的工作完成弹窗，自动提交并关闭
+        if let window = currentWorkCompletionWindow {
+            window.autoSubmit()
+            clearPendingWorkCompletion()
+        }
+
         TBStatusItem.shared.setIcon(name: .work)
         player.playWindup()
         player.startTicking()
@@ -342,9 +392,20 @@ class TBTimer: ObservableObject {
     }
 
     private func showWorkCompletionWindow(startTime: Date, endTime: Date) {
+        // 如果已有弹窗打开，先关闭它
+        if currentWorkCompletionWindow != nil {
+            closeWorkCompletionWindow()
+        }
+
+        // 创建默认的工作完成数据（空描述和标签）
+        pendingWorkCompletionData = WorkCompletionData(description: "", tags: [], startTime: startTime, endTime: endTime)
+
         let workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime) { [weak self] completionData in
             self?.handleWorkCompletion(completionData)
+            self?.clearPendingWorkCompletion()
         }
+
+        currentWorkCompletionWindow = workCompletionWindow
         workCompletionWindow.show()
     }
 
@@ -378,14 +439,32 @@ class TBTimer: ObservableObject {
 
         userDefaults.set(savedCompletions, forKey: "SavedWorkCompletions")
     }
+
+    private func closeWorkCompletionWindow() {
+        currentWorkCompletionWindow?.window?.close()
+        currentWorkCompletionWindow = nil
+    }
+
+    private func clearPendingWorkCompletion() {
+        pendingWorkCompletionData = nil
+        currentWorkCompletionWindow = nil
+    }
 }
 
 // WorkCompletionWindow 类定义
 class WorkCompletionWindow: NSWindowController {
+    private var onCompletion: ((WorkCompletionData) -> Void)?
+    private var startTime: Date
+    private var endTime: Date
+
     init(startTime: Date, endTime: Date, onCompletion: @escaping (WorkCompletionData) -> Void) {
+        self.startTime = startTime
+        self.endTime = endTime
+        self.onCompletion = onCompletion
+
         let workCompletionView = WorkCompletionView(startTime: startTime, endTime: endTime, onCompletion: onCompletion)
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 380),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -396,6 +475,9 @@ class WorkCompletionWindow: NSWindowController {
         window.level = .floating
 
         super.init(window: window)
+
+        // 设置delegate必须在super.init()之后
+        window.delegate = self
     }
 
     required init?(coder: NSCoder) {
@@ -405,5 +487,30 @@ class WorkCompletionWindow: NSWindowController {
     func show() {
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func autoSubmit() {
+        // 自动提交空的工作完成数据
+        let autoData = WorkCompletionData(description: "", tags: [], startTime: startTime, endTime: endTime)
+        onCompletion?(autoData)
+
+        // 显示自动提交通知
+        showAutoSubmitNotification()
+
+        window?.close()
+    }
+
+    private func showAutoSubmitNotification() {
+        let notification = NSUserNotification()
+        notification.title = NSLocalizedString("WorkCompletionView.autoSubmit.title", comment: "Auto-submitted")
+        notification.informativeText = NSLocalizedString("WorkCompletionView.autoSubmit.message", comment: "Auto-submitted message")
+        NSUserNotificationCenter.default.deliver(notification)
+    }
+}
+
+extension WorkCompletionWindow: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        // 当窗口关闭时，如果有回调，则执行自动提交
+        onCompletion?(WorkCompletionData(description: "", tags: [], startTime: startTime, endTime: endTime))
     }
 }

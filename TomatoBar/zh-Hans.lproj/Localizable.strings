@@ -32,6 +32,9 @@
 "TBTimer.onRestFinish.title" = "休息结束";
 "TBTimer.onRestFinish.body" = "继续努力!";
 "WorkCompletionView.title" = "番茄钟完成！";
+"WorkCompletionView.time.label" = "时间段";
+"WorkCompletionView.startTime.label" = "开始时间";
+"WorkCompletionView.endTime.label" = "结束时间";
 "WorkCompletionView.description.label" = "工作内容";
 "WorkCompletionView.description.placeholder" = "描述你在这个番茄钟中完成的工作...";
 "WorkCompletionView.tags.label" = "标签";
@@ -41,3 +44,5 @@
 "WorkCompletionView.submit" = "提交";
 "WorkCompletionView.success.title" = "成功";
 "WorkCompletionView.success.message" = "工作记录已保存";
+"WorkCompletionView.autoSubmit.title" = "自动提交";
+"WorkCompletionView.autoSubmit.message" = "新的番茄钟开始时，之前的番茄钟已自动提交";

@@ -32,6 +32,9 @@
 "TBTimer.onRestFinish.title" = "Break is over";
 "TBTimer.onRestFinish.body" = "Keep up the good work!";
 "WorkCompletionView.title" = "Pomodoro Completed!";
+"WorkCompletionView.time.label" = "Time Period";
+"WorkCompletionView.startTime.label" = "Start Time";
+"WorkCompletionView.endTime.label" = "End Time";
 "WorkCompletionView.description.label" = "Work Description";
 "WorkCompletionView.description.placeholder" = "Describe what you accomplished in this pomodoro...";
 "WorkCompletionView.tags.label" = "Tags";
@@ -41,3 +44,5 @@
 "WorkCompletionView.submit" = "Submit";
 "WorkCompletionView.success.title" = "Success";
 "WorkCompletionView.success.message" = "Work record saved";
+"WorkCompletionView.autoSubmit.title" = "Auto-submitted";
+"WorkCompletionView.autoSubmit.message" = "Previous pomodoro was automatically submitted when new one started";
