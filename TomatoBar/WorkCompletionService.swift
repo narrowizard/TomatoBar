@@ -1,14 +1,17 @@
 import Foundation
 import CryptoKit
 
+// 默认API端点常量
+private let DEFAULT_API_ENDPOINT = "https://tomast.narro.cn/api/v1/pomodoros"
+
 internal class WorkCompletionService {
     static let shared = WorkCompletionService()
 
     private init() {}
 
-    // 从用户配置中获取API端点，默认为空字符串（不上传）
+    // 从用户配置中获取API端点，默认为 DEFAULT_API_ENDPOINT
     private var apiEndpoint: String {
-        return UserDefaults.standard.string(forKey: "WorkCompletionAPIEndpoint") ?? ""
+        return UserDefaults.standard.string(forKey: "WorkCompletionAPIEndpoint") ?? DEFAULT_API_ENDPOINT
     }
 
     // 获取App ID

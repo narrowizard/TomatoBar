@@ -2,6 +2,9 @@ import KeyboardShortcuts
 import LaunchAtLogin
 import SwiftUI
 
+// 默认API端点常量
+private let DEFAULT_API_ENDPOINT = "https://tomast.narro.cn/api/v1/pomodoros"
+
 extension KeyboardShortcuts.Name {
     static let startStopTimer = Self("startStopTimer")
 }
@@ -57,7 +60,7 @@ private struct IntervalsView: View {
 private struct SettingsView: View {
     @EnvironmentObject var timer: TBTimer
     @ObservedObject private var launchAtLogin = LaunchAtLogin.observable
-    @State private var apiEndpoint = UserDefaults.standard.string(forKey: "WorkCompletionAPIEndpoint") ?? ""
+    @State private var apiEndpoint = UserDefaults.standard.string(forKey: "WorkCompletionAPIEndpoint") ?? DEFAULT_API_ENDPOINT
     @State private var appId = UserDefaults.standard.string(forKey: "WorkCompletionAppId") ?? ""
     @State private var appSecret = UserDefaults.standard.string(forKey: "WorkCompletionAppSecret") ?? ""
 
@@ -94,7 +97,7 @@ private struct SettingsView: View {
                 Text(NSLocalizedString("SettingsView.apiEndpoint.label", comment: "API endpoint label"))
                     .font(.headline)
                 HStack {
-                    TextField("https://your-api.com/work-completions", text: $apiEndpoint)
+                    TextField(DEFAULT_API_ENDPOINT, text: $apiEndpoint)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                     Button("保存") {
                         UserDefaults.standard.set(apiEndpoint, forKey: "WorkCompletionAPIEndpoint")
