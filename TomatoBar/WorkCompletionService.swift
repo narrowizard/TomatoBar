@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-class WorkCompletionService {
+internal class WorkCompletionService {
     static let shared = WorkCompletionService()
 
     private init() {}
@@ -21,40 +21,30 @@ class WorkCompletionService {
         return UserDefaults.standard.string(forKey: "WorkCompletionAppSecret") ?? ""
     }
 
-    func uploadWorkCompletion(_ data: WorkCompletionRecord, completion: @escaping (Result<Void, Error>) -> Void) {
+    internal func uploadWorkCompletion(_ data: WorkCompletionRecord, completion: @escaping (Result<Void, Error>) -> Void) {
         // 检查是否配置了API端点
         guard !apiEndpoint.isEmpty else {
             completion(.failure(WorkCompletionError.noEndpointConfigured))
             return
         }
 
-        // 检查是否配置了App ID和App Secret（如果需要签名认证）
-        let needsAuth = !appId.isEmpty || !appSecret.isEmpty
-        if needsAuth && (appId.isEmpty || appSecret.isEmpty) {
+        // 检查是否配置了App ID和App Secret
+        guard !appId.isEmpty, !appSecret.isEmpty else {
             completion(.failure(WorkCompletionError.missingAuthCredentials))
             return
         }
 
+        // 创建时间戳
+        let timestamp = String(Int(Date().timeIntervalSince1970))
+
         // 创建基础数据结构，匹配API要求的格式
-        var requestData: [String: Any] = [
+        let requestData: [String: Any] = [
             "client": "macOS \(ProcessInfo.processInfo.operatingSystemVersionString)",
             "description": data.description,
             "end_time": ISO8601DateFormatter().string(from: data.endTime),
             "source": "TomatoBar App",
             "start_time": ISO8601DateFormatter().string(from: data.startTime)
         ]
-
-        // 如果需要认证，添加App ID和签名
-        if needsAuth {
-            requestData["app_id"] = appId
-
-            if let signature = generateSignature(for: requestData, secret: appSecret) {
-                requestData["signature"] = signature
-            } else {
-                completion(.failure(WorkCompletionError.signatureGenerationFailed))
-                return
-            }
-        }
 
         // 转换为JSON
         guard let jsonData = try? JSONSerialization.data(withJSONObject: requestData) else {
@@ -72,10 +62,16 @@ class WorkCompletionService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        // 如果需要认证，添加认证头
-        if needsAuth {
-            request.setValue("Bearer \(appId)", forHTTPHeaderField: "Authorization")
+        // 生成签名
+        guard let signature = generateSignature(for: request, appId: appId, timestamp: timestamp, secret: appSecret) else {
+            completion(.failure(WorkCompletionError.signatureGenerationFailed))
+            return
         }
+
+        // 添加认证头
+        request.setValue(appId, forHTTPHeaderField: "X-App-ID")
+        request.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
+        request.setValue(signature, forHTTPHeaderField: "X-Signature")
 
         request.httpBody = jsonData
 
@@ -126,7 +122,7 @@ class WorkCompletionService {
     }
 
     // 简单的数据传输对象，用于本地存储
-    struct WorkCompletionRecord {
+    internal struct WorkCompletionRecord {
         let description: String
         let tags: [String]
         let startTime: Date
@@ -134,36 +130,59 @@ class WorkCompletionService {
     }
 
     // 生成签名（HMAC-SHA256）
-    private func generateSignature(for data: [String: Any], secret: String) -> String? {
-        do {
-            // 按字母顺序排序参数
-            let sortedKeys = data.keys.sorted()
-            var queryString = ""
-
-            for key in sortedKeys {
-                if key != "signature" { // 不对签名本身进行签名
-                    let value = data[key]
-                    if let stringValue = value as? String {
-                        if !queryString.isEmpty {
-                            queryString += "&"
-                        }
-                        queryString += "\(key)=\(stringValue)"
-                    }
-                }
-            }
-
-            // 使用HMAC-SHA256生成签名
-            let key = secret.data(using: .utf8)!
-            let data = queryString.data(using: .utf8)!
-
-            let digest = HMAC<SHA256>.authenticationCode(for: data, using: SymmetricKey(data: key))
-            let signature = Data(digest).base64EncodedString()
-
-            return signature
-        } catch {
-            print("签名生成失败: \(error)")
+    private func generateSignature(for request: URLRequest, appId: String, timestamp: String, secret: String) -> String? {
+        guard let url = request.url else {
             return nil
         }
+
+        // 获取请求方法
+        let method = request.httpMethod ?? "POST"
+
+        // 获取路径
+        let path = url.path
+
+        // 获取查询参数并排序
+        var queryParams = [String: String]()
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let queryItems = components.queryItems {
+            for item in queryItems {
+                if let value = item.value {
+                    queryParams[item.name] = value
+                }
+            }
+        }
+
+        // 移除签名相关的参数
+        queryParams.removeValue(forKey: "signature")
+        queryParams.removeValue(forKey: "api_key")
+        queryParams.removeValue(forKey: "timestamp")
+        queryParams.removeValue(forKey: "app_id")
+
+        // 构建查询字符串
+        let sortedKeys = queryParams.keys.sorted()
+        var queryStringParts = [String]()
+        for key in sortedKeys {
+            if let value = queryParams[key],
+               let encodedValue = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+                queryStringParts.append("\(key)=\(encodedValue)")
+            }
+        }
+        let queryString = queryStringParts.joined(separator: "&")
+
+        // 构建签名字符串
+        // 格式: METHOD\nPATH\nQUERY_STRING\nTIMESTAMP\nAPI_KEY
+        let signingString = "\(method)\n\(path)\n\(queryString)\n\(timestamp)\n\(appId)"
+
+        // 使用HMAC-SHA256生成签名
+        guard let keyData = secret.data(using: .utf8),
+              let stringData = signingString.data(using: .utf8) else {
+            return nil
+        }
+
+        let digest = HMAC<SHA256>.authenticationCode(for: stringData, using: SymmetricKey(data: keyData))
+        let signature = Data(digest).hexEncodedString()
+
+        return signature
     }
 
     // 获取本地保存的完成记录
