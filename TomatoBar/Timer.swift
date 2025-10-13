@@ -40,10 +40,11 @@ struct WorkCompletionView: View {
     let endTime: Date
     let onCompletion: (WorkCompletionData) -> Void
 
-    init(startTime: Date, endTime: Date, onCompletion: @escaping (WorkCompletionData) -> Void) {
+    init(startTime: Date, endTime: Date, defaultDescription: String = "", onCompletion: @escaping (WorkCompletionData) -> Void) {
         self.startTime = startTime
         self.endTime = endTime
         self.onCompletion = onCompletion
+        self._workDescription = State(initialValue: defaultDescription)
     }
 
     var body: some View {
@@ -386,11 +387,14 @@ class TBTimer: ObservableObject {
     }
 
     private func showWorkCompletionWindow(startTime: Date, endTime: Date) {
-        // 创建默认的工作完成数据（空描述和标签）
-        pendingWorkCompletionData = WorkCompletionData(description: "", tags: [], startTime: startTime, endTime: endTime)
+        // 获取上次填写的工作描述作为默认值
+        let lastDescription = UserDefaults.standard.string(forKey: "LastWorkDescription") ?? ""
+
+        // 创建默认的工作完成数据（使用上次描述和空标签）
+        pendingWorkCompletionData = WorkCompletionData(description: lastDescription, tags: [], startTime: startTime, endTime: endTime)
 
         var workCompletionWindow: WorkCompletionWindow!
-        workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime, onCompletion: { [weak self] completionData in
+        workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime, defaultDescription: lastDescription, onCompletion: { [weak self] completionData in
             self?.handleWorkCompletion(completionData)
         }, onClose: { [weak self, weak workCompletionWindow] in
             guard let self = self, let window = workCompletionWindow else { return }
@@ -406,6 +410,11 @@ class TBTimer: ObservableObject {
         // 先保存到本地作为备份
         saveWorkCompletionLocally(data)
         print("工作记录已保存到本地")
+
+        // 保存用户最后一次填写的内容作为下次默认值
+        if !data.description.isEmpty {
+            UserDefaults.standard.set(data.description, forKey: "LastWorkDescription")
+        }
 
         // 如果有描述，尝试上传到服务器
         if !data.description.isEmpty {
@@ -552,13 +561,13 @@ class WorkCompletionWindow: NSWindowController, NSWindowDelegate {
     private var startTime: Date
     private var endTime: Date
 
-    init(startTime: Date, endTime: Date, onCompletion: @escaping (WorkCompletionData) -> Void, onClose: @escaping () -> Void) {
+    init(startTime: Date, endTime: Date, defaultDescription: String = "", onCompletion: @escaping (WorkCompletionData) -> Void, onClose: @escaping () -> Void) {
         self.startTime = startTime
         self.endTime = endTime
         self.onCompletion = onCompletion
         self.onClose = onClose
 
-        let workCompletionView = WorkCompletionView(startTime: startTime, endTime: endTime, onCompletion: onCompletion)
+        let workCompletionView = WorkCompletionView(startTime: startTime, endTime: endTime, defaultDescription: defaultDescription, onCompletion: onCompletion)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 320),
             styleMask: [.titled, .closable],
