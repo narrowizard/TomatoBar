@@ -173,7 +173,7 @@ class TBTimer: ObservableObject {
     private var timerFormatter = DateComponentsFormatter()
     @Published var timeLeftString: String = ""
     @Published var timer: DispatchSourceTimer?
-    private var workCompletionWindows: [WorkCompletionWindow] = []
+    private var currentWorkCompletionWindow: WorkCompletionWindow?
     private var pendingWorkCompletionData: WorkCompletionData?
 
     init() {
@@ -391,28 +391,23 @@ class TBTimer: ObservableObject {
     }
 
     private func showWorkCompletionWindow(startTime: Date, endTime: Date) {
+        // 如果已有弹窗打开，不关闭它，让用户自己处理
+        if currentWorkCompletionWindow != nil {
+            return
+        }
+
         // 获取上次填写的工作描述作为默认值
         let lastDescription = UserDefaults.standard.string(forKey: "LastWorkDescription") ?? ""
 
         // 创建默认的工作完成数据（使用上次描述和空标签）
         pendingWorkCompletionData = WorkCompletionData(description: lastDescription, tags: [], startTime: startTime, endTime: endTime)
 
-        var workCompletionWindow: WorkCompletionWindow!
-        workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime, defaultDescription: lastDescription, onCompletion: { [weak self, weak window = workCompletionWindow] completionData in
+        let workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime, defaultDescription: lastDescription, onCompletion: { [weak self] completionData in
             self?.handleWorkCompletion(completionData)
-            // 立即从数组中移除窗口引用，但不关闭窗口
-            // 让窗口通过 presentationMode 正常关闭
-            if let self = self, let window = window {
-                self.removeWorkCompletionWindow(window)
-            }
-        }, onClose: { [weak self] in
-            guard let self = self else { return }
-            // 清空所有窗口作为备用方案
-            self.workCompletionWindows.removeAll()
+            self?.clearPendingWorkCompletion()
         })
 
-        // 将窗口添加到数组中
-        workCompletionWindows.append(workCompletionWindow)
+        currentWorkCompletionWindow = workCompletionWindow
         workCompletionWindow.show()
     }
 
@@ -557,29 +552,29 @@ class TBTimer: ObservableObject {
     
     private func clearPendingWorkCompletion() {
         pendingWorkCompletionData = nil
+        currentWorkCompletionWindow = nil
     }
 
-    private func removeWorkCompletionWindow(_ window: WorkCompletionWindow) {
-        workCompletionWindows.removeAll { $0 === window }
+    private func closeWorkCompletionWindow() {
+        currentWorkCompletionWindow?.window?.close()
+        currentWorkCompletionWindow = nil
     }
 
     private func hasUnsubmittedWorkCompletionWindows() -> Bool {
-        return !workCompletionWindows.isEmpty
+        return currentWorkCompletionWindow != nil
     }
 }
 
 // WorkCompletionWindow 类定义
 class WorkCompletionWindow: NSWindowController, NSWindowDelegate {
     private var onCompletion: ((WorkCompletionData) -> Void)?
-    private var onClose: (() -> Void)?
     private var startTime: Date
     private var endTime: Date
 
-    init(startTime: Date, endTime: Date, defaultDescription: String = "", onCompletion: @escaping (WorkCompletionData) -> Void, onClose: @escaping () -> Void) {
+    init(startTime: Date, endTime: Date, defaultDescription: String = "", onCompletion: @escaping (WorkCompletionData) -> Void) {
         self.startTime = startTime
         self.endTime = endTime
         self.onCompletion = onCompletion
-        self.onClose = onClose
 
         let workCompletionView = WorkCompletionView(startTime: startTime, endTime: endTime, defaultDescription: defaultDescription, onCompletion: onCompletion)
         let window = NSWindow(
@@ -629,11 +624,8 @@ class WorkCompletionWindow: NSWindowController, NSWindowDelegate {
     // NSWindowDelegate 方法
     func windowWillClose(_ notification: Notification) {
         // 窗口关闭时不自动提交数据
-        // 调用onClose回调，让TBTimer从数组中移除这个窗口
-        onClose?()
-        // 清理回调，避免内存泄漏
+        // 只清理回调，避免内存泄漏
         onCompletion = nil
-        onClose = nil
     }
 }
 
