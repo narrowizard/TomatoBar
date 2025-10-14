@@ -99,6 +99,8 @@ struct WorkCompletionView: View {
   
             HStack {
                 Button(NSLocalizedString("WorkCompletionView.cancel", comment: "Cancel button")) {
+                    // 取消时也调用onCompletion，传递空数据来触发窗口清理
+                    onCompletion(WorkCompletionData(description: "", tags: [], startTime: startTime, endTime: endTime))
                     presentationMode.wrappedValue.dismiss()
                 }
                 .keyboardShortcut(.escape)
@@ -201,10 +203,12 @@ class TBTimer: ObservableObject {
         ])
         stateMachine.addRoutes(event: .timerFired, transitions: [.work => .rest])
         stateMachine.addRoutes(event: .timerFired, transitions: [.rest => .idle]) { _ in
-            self.stopAfterBreak
+            // 如果有未提交的弹窗，或者用户设置了休息后停止，则转到idle
+            return self.hasUnsubmittedWorkCompletionWindows() || self.stopAfterBreak
         }
         stateMachine.addRoutes(event: .timerFired, transitions: [.rest => .work]) { _ in
-            !self.stopAfterBreak
+            // 只有在没有未提交弹窗且用户没有设置休息后停止时，才自动开始工作
+            return !self.hasUnsubmittedWorkCompletionWindows() && !self.stopAfterBreak
         }
         stateMachine.addRoutes(event: .skipRest, transitions: [.rest => .work])
 
@@ -394,11 +398,17 @@ class TBTimer: ObservableObject {
         pendingWorkCompletionData = WorkCompletionData(description: lastDescription, tags: [], startTime: startTime, endTime: endTime)
 
         var workCompletionWindow: WorkCompletionWindow!
-        workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime, defaultDescription: lastDescription, onCompletion: { [weak self] completionData in
+        workCompletionWindow = WorkCompletionWindow(startTime: startTime, endTime: endTime, defaultDescription: lastDescription, onCompletion: { [weak self, weak window = workCompletionWindow] completionData in
             self?.handleWorkCompletion(completionData)
-        }, onClose: { [weak self, weak workCompletionWindow] in
-            guard let self = self, let window = workCompletionWindow else { return }
-            self.removeWorkCompletionWindow(window)
+            // 立即从数组中移除窗口引用，但不关闭窗口
+            // 让窗口通过 presentationMode 正常关闭
+            if let self = self, let window = window {
+                self.removeWorkCompletionWindow(window)
+            }
+        }, onClose: { [weak self] in
+            guard let self = self else { return }
+            // 清空所有窗口作为备用方案
+            self.workCompletionWindows.removeAll()
         })
 
         // 将窗口添加到数组中
@@ -551,6 +561,10 @@ class TBTimer: ObservableObject {
 
     private func removeWorkCompletionWindow(_ window: WorkCompletionWindow) {
         workCompletionWindows.removeAll { $0 === window }
+    }
+
+    private func hasUnsubmittedWorkCompletionWindows() -> Bool {
+        return !workCompletionWindows.isEmpty
     }
 }
 
